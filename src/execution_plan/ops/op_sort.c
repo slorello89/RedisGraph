@@ -18,6 +18,7 @@ static Record SortConsume(OpBase *opBase);
 static OpResult SortReset(OpBase *opBase);
 static OpBase *SortClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void SortFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 // Heapsort function to compare two records on a subset of fields.
 // Return value similar to strcmp.
@@ -87,7 +88,7 @@ OpBase *NewSortOp(const ExecutionPlan *plan, AR_ExpNode **exps, int *directions)
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_SORT, "Sort", SortInit, SortConsume, SortReset, NULL, SortClone,
-				SortFree, false, plan);
+				SortFree, Emit, false, plan);
 
 	uint comparison_count = array_len(exps);
 	op->record_offsets = array_new(uint, comparison_count);
@@ -99,6 +100,10 @@ OpBase *NewSortOp(const ExecutionPlan *plan, AR_ExpNode **exps, int *directions)
 	}
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static OpResult SortInit(OpBase *opBase) {

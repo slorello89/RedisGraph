@@ -13,6 +13,7 @@
 static Record MergeCreateConsume(OpBase *opBase);
 static OpBase *MergeCreateClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void MergeCreateFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 // Convert a graph entity's components into an identifying hash code.
 static void _IncrementalHashEntity(XXH64_state_t *state, const char *label,
@@ -70,7 +71,7 @@ OpBase *NewMergeCreateOp(const ExecutionPlan *plan, NodeCreateCtx *nodes, EdgeCr
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_MERGE_CREATE, "MergeCreate", NULL, MergeCreateConsume,
-				NULL, NULL, MergeCreateClone, MergeCreateFree, true, plan);
+				NULL, NULL, MergeCreateClone, MergeCreateFree, Emit, true, plan);
 
 	uint node_blueprint_count = array_len(nodes);
 	uint edge_blueprint_count = array_len(edges);
@@ -92,6 +93,10 @@ OpBase *NewMergeCreateOp(const ExecutionPlan *plan, NodeCreateCtx *nodes, EdgeCr
 	}
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 /* Prepare all creations associated with the current Record.

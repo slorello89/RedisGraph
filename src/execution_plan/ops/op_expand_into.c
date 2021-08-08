@@ -17,6 +17,7 @@ static Record ExpandIntoConsume(OpBase *opBase);
 static OpResult ExpandIntoReset(OpBase *opBase);
 static OpBase *ExpandIntoClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void ExpandIntoFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 // String representation of operation.
 static inline int ExpandIntoToString(const OpBase *ctx, char *buf, uint buf_len) {
@@ -82,7 +83,7 @@ OpBase *NewExpandIntoOp(const ExecutionPlan *plan, Graph *g, AlgebraicExpression
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_EXPAND_INTO, "Expand Into", ExpandIntoInit, ExpandIntoConsume,
-				ExpandIntoReset, ExpandIntoToString, ExpandIntoClone, ExpandIntoFree, false, plan);
+				ExpandIntoReset, ExpandIntoToString, ExpandIntoClone, ExpandIntoFree, Emit, false, plan);
 
 	// Make sure that all entities are represented in Record
 	bool aware;
@@ -102,6 +103,10 @@ OpBase *NewExpandIntoOp(const ExecutionPlan *plan, Graph *g, AlgebraicExpression
 	}
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static OpResult ExpandIntoInit(OpBase *opBase) {

@@ -15,6 +15,7 @@ static Record AntiSemiApplyConsume(OpBase *opBase);
 static OpResult SemiApplyReset(OpBase *opBase);
 static OpBase *SemiApplyClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void SemiApplyFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 static inline Record _pullFromMatchStream(OpSemiApply *op) {
 	return OpBase_Consume(op->match_branch);
@@ -29,12 +30,16 @@ OpBase *NewSemiApplyOp(const ExecutionPlan *plan, bool anti) {
 	// Set our Op operations
 	if(anti) {
 		OpBase_Init((OpBase *)op, OPType_ANTI_SEMI_APPLY, "Anti Semi Apply", SemiApplyInit,
-					AntiSemiApplyConsume, SemiApplyReset, NULL, SemiApplyClone, SemiApplyFree, false, plan);
+					AntiSemiApplyConsume, SemiApplyReset, NULL, SemiApplyClone, SemiApplyFree, Emit, false, plan);
 	} else {
 		OpBase_Init((OpBase *)op, OPType_SEMI_APPLY, "Semi Apply", SemiApplyInit, SemiApplyConsume,
-					SemiApplyReset, NULL, SemiApplyClone, SemiApplyFree, false, plan);
+					SemiApplyReset, NULL, SemiApplyClone, SemiApplyFree, Emit, false, plan);
 	}
 	return (OpBase *) op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static OpResult SemiApplyInit(OpBase *opBase) {

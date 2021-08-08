@@ -15,6 +15,7 @@ static Record AllNodeScanConsumeFromChild(OpBase *opBase);
 static OpResult AllNodeScanReset(OpBase *opBase);
 static OpBase *AllNodeScanClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void AllNodeScanFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 static inline int AllNodeScanToString(const OpBase *ctx, char *buf, uint buf_len) {
 	return ScanToString(ctx, buf, buf_len, ((AllNodeScan *)ctx)->alias, NULL);
@@ -28,10 +29,14 @@ OpBase *NewAllNodeScanOp(const ExecutionPlan *plan, const char *alias) {
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_ALL_NODE_SCAN, "All Node Scan", AllNodeScanInit,
-				AllNodeScanConsume, AllNodeScanReset, AllNodeScanToString, AllNodeScanClone, AllNodeScanFree, false,
+				AllNodeScanConsume, AllNodeScanReset, AllNodeScanToString, AllNodeScanClone, AllNodeScanFree, Emit, false,
 				plan);
 	op->nodeRecIdx = OpBase_Modifies((OpBase *)op, alias);
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static OpResult AllNodeScanInit(OpBase *opBase) {

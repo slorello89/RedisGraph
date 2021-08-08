@@ -186,7 +186,7 @@ static void _ExecuteQuery(void *args) {
 			ExecutionPlan_Print(plan, rm_ctx);
 		}
 		else {
-			result_set = ExecutionPlan_Execute(plan);
+			result_set = ExecutionPlan_JIT(plan);
 		}
 
 		// Emit error if query timed out.

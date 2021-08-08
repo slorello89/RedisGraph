@@ -8,6 +8,7 @@
 #include "../RG.h"
 #include "./ops/ops.h"
 #include "../errors.h"
+#include "../jit/jit.h"
 #include "../util/arr.h"
 #include "../query_ctx.h"
 #include "../util/rmalloc.h"
@@ -15,6 +16,7 @@
 #include "../ast/ast_build_filter_tree.h"
 #include "execution_plan_build/execution_plan_construct.h"
 #include "execution_plan_build/execution_plan_modify.h"
+
 
 #include <setjmp.h>
 
@@ -380,6 +382,65 @@ ResultSet *ExecutionPlan_Execute(ExecutionPlan *plan) {
 	// Execute the root operation and free the processed Record until the data stream is depleted.
 	while((r = OpBase_Consume(plan->root)) != NULL) ExecutionPlan_ReturnRecord(r->owner, r);
 
+	return QueryCtx_GetResultSet();
+}
+
+ResultSet *ExecutionPlan_JIT(ExecutionPlan *plan) {
+	ASSERT(plan->prepared)
+	
+	EmitCtx_Init();
+
+	EmitCtx *emit_ctx = EmitCtx_Get();
+	LLVMTypeRef p[0];
+	LLVMTypeRef func_type = LLVMFunctionType(LLVMVoidType(), p, 0, false);
+	LLVMValueRef query = LLVMAddFunction(emit_ctx->module, "query", func_type);
+	
+	LLVMBasicBlockRef entry = LLVMAppendBasicBlock(query, "entry");
+
+    LLVMBuilderRef builder = LLVMCreateBuilder();
+    LLVMPositionBuilderAtEnd(builder, entry);
+
+	emit_ctx->builder = builder;
+	while(OpBase_Emit(plan->root)) {}
+	
+	LLVMBuildRetVoid(builder);
+
+	char *m = LLVMPrintModuleToString(emit_ctx->module);
+	printf("%s\n", m);
+
+	char *error;
+
+    LLVMVerifyModule(emit_ctx->module, LLVMAbortProcessAction, &error);
+    LLVMDisposeMessage(error);
+    error = NULL;
+
+	LLVMInitializeNativeTarget();
+	LLVMInitializeNativeAsmPrinter();
+	LLVMInitializeNativeAsmParser();
+
+	LLVMExecutionEngineRef engine;
+
+	if (LLVMCreateExecutionEngineForModule(&engine, emit_ctx->module, &error) != 0) {
+		fprintf(stderr, "failed to create execution engine\n");
+		abort();
+	}
+
+
+	if (error) {
+		fprintf(stderr, "error: %s\n", error);
+		LLVMDisposeMessage(error);
+	}
+
+
+	LLVMAddGlobalMapping(engine, emit_ctx->addRecord_func, ResultSet_AddRecord);
+	LLVMAddGlobalMapping(engine, emit_ctx->addToRecord_func, Record_Add);
+	LLVMAddGlobalMapping(engine, emit_ctx->createRecord_func, OpBase_CreateRecord);
+	LLVMAddGlobalMapping(engine, emit_ctx->AR_EXP_Evaluate_func, AR_EXP_Evaluate);
+
+
+    void (*func)() = (void (*)(void))LLVMGetFunctionAddress(engine, "query");
+	func();
+	
 	return QueryCtx_GetResultSet();
 }
 

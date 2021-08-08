@@ -15,6 +15,7 @@ static Record DeleteConsume(OpBase *opBase);
 static OpResult DeleteInit(OpBase *opBase);
 static OpBase *DeleteClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void DeleteFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 void _DeleteEntities(OpDelete *op) {
 	Graph  *g                     =  op->gc->g;
@@ -70,9 +71,13 @@ OpBase *NewDeleteOp(const ExecutionPlan *plan, AR_ExpNode **exps) {
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_DELETE, "Delete", DeleteInit, DeleteConsume,
-				NULL, NULL, DeleteClone, DeleteFree, true, plan);
+				NULL, NULL, DeleteClone, DeleteFree, Emit, true, plan);
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static OpResult DeleteInit(OpBase *opBase) {

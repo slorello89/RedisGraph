@@ -18,6 +18,7 @@ static Record NodeByLabelScanNoOp(OpBase *opBase);
 static OpResult NodeByLabelScanReset(OpBase *opBase);
 static OpBase *NodeByLabelScanClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void NodeByLabelScanFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 static inline int NodeByLabelScanToString(const OpBase *ctx, char *buf, uint buf_len) {
 	NodeByLabelScan *op = (NodeByLabelScan *)ctx;
@@ -37,11 +38,15 @@ OpBase *NewNodeByLabelScanOp(const ExecutionPlan *plan, NodeScanCtx n) {
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_NODE_BY_LABEL_SCAN, "Node By Label Scan", NodeByLabelScanInit,
 				NodeByLabelScanConsume, NodeByLabelScanReset, NodeByLabelScanToString, NodeByLabelScanClone,
-				NodeByLabelScanFree, false, plan);
+				NodeByLabelScanFree, Emit, false, plan);
 
 	op->nodeRecIdx = OpBase_Modifies((OpBase *)op, n.alias);
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 void NodeByLabelScanOp_SetIDRange(NodeByLabelScan *op, UnsignedRange *id_range) {

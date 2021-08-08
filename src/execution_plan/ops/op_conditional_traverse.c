@@ -18,6 +18,7 @@ static Record CondTraverseConsume(OpBase *opBase);
 static OpResult CondTraverseReset(OpBase *opBase);
 static OpBase *CondTraverseClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void CondTraverseFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 static int CondTraverseToString(const OpBase *ctx, char *buf, uint buf_len) {
 	return TraversalToString(ctx, buf, buf_len, ((const OpCondTraverse *)ctx)->ae);
@@ -90,7 +91,7 @@ OpBase *NewCondTraverseOp(const ExecutionPlan *plan, Graph *g, AlgebraicExpressi
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_CONDITIONAL_TRAVERSE, "Conditional Traverse", CondTraverseInit,
-				CondTraverseConsume, CondTraverseReset, CondTraverseToString, CondTraverseClone, CondTraverseFree,
+				CondTraverseConsume, CondTraverseReset, CondTraverseToString, CondTraverseClone, CondTraverseFree, Emit,
 				false, plan);
 
 	bool aware = OpBase_Aware((OpBase *)op, AlgebraicExpression_Source(ae), &op->srcNodeIdx);
@@ -114,6 +115,10 @@ OpBase *NewCondTraverseOp(const ExecutionPlan *plan, Graph *g, AlgebraicExpressi
 	}
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+
 }
 
 static OpResult CondTraverseInit(OpBase *opBase) {

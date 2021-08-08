@@ -64,9 +64,7 @@ void Record_Clone(const Record r, Record clone) {
 	 * TODO: I wish we wouldn't have to perform this loop as it is a major performance hit
 	 * with the introduction of a garbage collection this should be removed. */
 	for(int i = 0; i < entry_count; i++) {
-		if(Record_GetType(clone, i) == REC_TYPE_SCALAR) {
-			SIValue_MakeVolatile(&clone->entries[i].value.s);
-		}
+		SIValue_MakeVolatile(&clone->entries[i].value.s);
 	}
 }
 

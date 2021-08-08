@@ -13,6 +13,7 @@ static Record ApplyConsume(OpBase *opBase);
 static OpResult ApplyReset(OpBase *opBase);
 static OpBase *ApplyClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void ApplyFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 OpBase *NewApplyOp(const ExecutionPlan *plan) {
 	Apply *op = rm_malloc(sizeof(Apply));
@@ -23,9 +24,13 @@ OpBase *NewApplyOp(const ExecutionPlan *plan) {
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_APPLY, "Apply", ApplyInit, ApplyConsume, ApplyReset, NULL,
-				ApplyClone, ApplyFree, false, plan);
+				ApplyClone, ApplyFree, Emit, false, plan);
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static OpResult ApplyInit(OpBase *opBase) {

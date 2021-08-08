@@ -14,6 +14,7 @@ static Record LimitConsume(OpBase *opBase);
 static OpResult LimitReset(OpBase *opBase);
 static void LimitFree(OpBase *opBase);
 static OpBase *LimitClone(const ExecutionPlan *plan, const OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 static void _eval_limit(OpLimit *op, AR_ExpNode *limit_exp) {
 	/* Store a copy of the original expression.
@@ -50,9 +51,13 @@ OpBase *NewLimitOp(const ExecutionPlan *plan, AR_ExpNode *limit_exp) {
 
 	// set operations
 	OpBase_Init((OpBase *)op, OPType_LIMIT, "Limit", NULL, LimitConsume, LimitReset, NULL,
-				LimitClone, LimitFree, false, plan);
+				LimitClone, LimitFree, Emit, false, plan);
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static Record LimitConsume(OpBase *opBase) {

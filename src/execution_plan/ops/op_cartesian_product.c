@@ -13,6 +13,7 @@ static Record CartesianProductConsume(OpBase *opBase);
 static OpResult CartesianProductReset(OpBase *opBase);
 static OpBase *CartesianProductClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void CartesianProductFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 OpBase *NewCartesianProductOp(const ExecutionPlan *plan) {
 	CartesianProduct *op = rm_malloc(sizeof(CartesianProduct));
@@ -21,9 +22,13 @@ OpBase *NewCartesianProductOp(const ExecutionPlan *plan) {
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_CARTESIAN_PRODUCT, "Cartesian Product", CartesianProductInit,
-				CartesianProductConsume, CartesianProductReset, NULL, CartesianProductClone, CartesianProductFree,
+				CartesianProductConsume, CartesianProductReset, NULL, CartesianProductClone, CartesianProductFree, Emit,
 				false, plan);
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static void _ResetStreams(CartesianProduct *cp, int streamIdx) {

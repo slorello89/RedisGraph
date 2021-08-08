@@ -15,6 +15,7 @@ static Record ProcCallConsume(OpBase *opBase);
 static OpResult ProcCallReset(OpBase *opBase);
 static OpBase *ProcCallClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void ProcCallFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 static void _construct_output_mappings(OpProcCall *op, SIValue *outputs) {
 	// Map procedure outputs to record indices.
@@ -99,7 +100,7 @@ OpBase *NewProcCallOp(const ExecutionPlan *plan, const char *proc_name, AR_ExpNo
 	// Set operations
 	OpBase_Init((OpBase *)op, OPType_PROC_CALL, "ProcedureCall",
 	  	NULL, ProcCallConsume, ProcCallReset, NULL, ProcCallClone,
-	  	ProcCallFree, !Procedure_IsReadOnly(op->procedure), plan);
+	  	ProcCallFree, Emit, !Procedure_IsReadOnly(op->procedure), plan);
 
 	// Set modifiers
 	for(uint i = 0; i < yield_count; i ++) {
@@ -112,6 +113,10 @@ OpBase *NewProcCallOp(const ExecutionPlan *plan, const char *proc_name, AR_ExpNo
 	}
 
 	return (OpBase*)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static Record ProcCallConsume(OpBase *opBase) {

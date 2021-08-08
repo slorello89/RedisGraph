@@ -16,6 +16,7 @@ static Record ValueHashJoinConsume(OpBase *opBase);
 static OpResult ValueHashJoinReset(OpBase *opBase);
 static OpBase *ValueHashJoinClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void ValueHashJoinFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 /* Determins order between two records by inspecting
  * element stored at postion idx. */
@@ -208,10 +209,14 @@ OpBase *NewValueHashJoin(const ExecutionPlan *plan, AR_ExpNode *lhs_exp, AR_ExpN
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_VALUE_HASH_JOIN, "Value Hash Join", ValueHashJoinInit,
 				ValueHashJoinConsume, ValueHashJoinReset, ValueHashJoinToString, ValueHashJoinClone,
-				ValueHashJoinFree, false, plan);
+				ValueHashJoinFree, Emit, false, plan);
 
 	op->join_value_rec_idx = OpBase_Modifies((OpBase *)op, "pivot");
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static OpResult ValueHashJoinInit(OpBase *ctx) {

@@ -14,6 +14,7 @@
 static Record CreateConsume(OpBase *opBase);
 static OpBase *CreateClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void CreateFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 OpBase *NewCreateOp(const ExecutionPlan *plan, NodeCreateCtx *nodes, EdgeCreateCtx *edges) {
 	OpCreate *op = rm_calloc(1, sizeof(OpCreate));
@@ -21,7 +22,7 @@ OpBase *NewCreateOp(const ExecutionPlan *plan, NodeCreateCtx *nodes, EdgeCreateC
 	op->pending = NewPendingCreationsContainer(nodes, edges); // Prepare all creation variables.
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_CREATE, "Create", NULL, CreateConsume,
-				NULL, NULL, CreateClone, CreateFree, true, plan);
+				NULL, NULL, CreateClone, CreateFree, Emit, true, plan);
 
 	uint node_blueprint_count = array_len(nodes);
 	uint edge_blueprint_count = array_len(edges);
@@ -43,6 +44,10 @@ OpBase *NewCreateOp(const ExecutionPlan *plan, NodeCreateCtx *nodes, EdgeCreateC
 	}
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 // Prepare to create all nodes for the current Record.

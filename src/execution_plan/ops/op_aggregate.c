@@ -17,6 +17,7 @@ static Record AggregateConsume(OpBase *opBase);
 static OpResult AggregateReset(OpBase *opBase);
 static OpBase *AggregateClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void AggregateFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 /* Migrate each expression projected by this operation to either
  * the array of keys or the array of aggregate functions as appropriate. */
@@ -209,7 +210,7 @@ OpBase *NewAggregateOp(const ExecutionPlan *plan, AR_ExpNode **exps, bool should
 	if(op->key_count) op->group_keys = rm_malloc(op->key_count * sizeof(SIValue));
 
 	OpBase_Init((OpBase *)op, OPType_AGGREGATE, "Aggregate", NULL, AggregateConsume,
-				AggregateReset, NULL, AggregateClone, AggregateFree, false, plan);
+				AggregateReset, NULL, AggregateClone, AggregateFree, Emit, false, plan);
 
 	// The projected record will associate values with their resolved name
 	// to ensure that space is allocated for each entry.
@@ -226,6 +227,10 @@ OpBase *NewAggregateOp(const ExecutionPlan *plan, AR_ExpNode **exps, bool should
 	}
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static Record AggregateConsume(OpBase *opBase) {

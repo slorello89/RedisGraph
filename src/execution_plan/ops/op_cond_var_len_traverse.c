@@ -21,6 +21,7 @@ static Record CondVarLenTraverseConsume(OpBase *opBase);
 static Record CondVarLenTraverseOptimizedConsume(OpBase *opBase);
 static OpBase *CondVarLenTraverseClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void CondVarLenTraverseFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 static void _setupTraversedRelations(CondVarLenTraverse *op) {
 	QGEdge *e = QueryGraph_GetEdgeByAlias(op->op.plan->query_graph, AlgebraicExpression_Edge(op->ae));
@@ -110,7 +111,7 @@ OpBase *NewCondVarLenTraverseOp(const ExecutionPlan *plan, Graph *g, AlgebraicEx
 				"Conditional Variable Length Traverse", CondVarLenTraverseInit,
 				CondVarLenTraverseConsume, CondVarLenTraverseReset,
 				CondVarLenTraverseToString, CondVarLenTraverseClone,
-				CondVarLenTraverseFree, false, plan);
+				CondVarLenTraverseFree, Emit, false, plan);
 
 	bool aware = OpBase_Aware((OpBase *)op, AlgebraicExpression_Source(ae), &op->srcNodeIdx);
 	ASSERT(aware);
@@ -123,6 +124,10 @@ OpBase *NewCondVarLenTraverseOp(const ExecutionPlan *plan, Graph *g, AlgebraicEx
 	_setTraverseDirection(op, e);
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static OpResult CondVarLenTraverseInit(OpBase *opBase) {

@@ -15,6 +15,7 @@
 static Record ProjectConsume(OpBase *opBase);
 static OpBase *ProjectClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void ProjectFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 OpBase *NewProjectOp(const ExecutionPlan *plan, AR_ExpNode **exps) {
 	OpProject *op = rm_malloc(sizeof(OpProject));
@@ -27,7 +28,7 @@ OpBase *NewProjectOp(const ExecutionPlan *plan, AR_ExpNode **exps) {
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_PROJECT, "Project", NULL, ProjectConsume,
-				NULL, NULL, ProjectClone, ProjectFree, false, plan);
+				NULL, NULL, ProjectClone, ProjectFree, Emit, false, plan);
 
 	for(uint i = 0; i < op->exp_count; i ++) {
 		// The projected record will associate values with their resolved name
@@ -37,6 +38,16 @@ OpBase *NewProjectOp(const ExecutionPlan *plan, AR_ExpNode **exps) {
 	}
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	OpProject *op = (OpProject *)opBase;
+	
+	if(op->singleResponse) return false;
+	op->singleResponse = true;
+
+	JIT_Project(opBase, op->exps, op->exp_count, op->record_offsets);
+	return true;
 }
 
 static Record ProjectConsume(OpBase *opBase) {

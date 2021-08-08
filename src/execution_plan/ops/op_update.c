@@ -20,6 +20,7 @@ static Record UpdateConsume(OpBase *opBase);
 static OpResult UpdateReset(OpBase *opBase);
 static OpBase *UpdateClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void UpdateFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 static Record _handoff(OpUpdate *op) {
 	/* TODO: poping a record out of op->records
@@ -39,7 +40,7 @@ OpBase *NewUpdateOp(const ExecutionPlan *plan, rax *update_exps) {
 
 	// set our op operations
 	OpBase_Init((OpBase *)op, OPType_UPDATE, "Update", UpdateInit, UpdateConsume,
-				UpdateReset, NULL, UpdateClone, UpdateFree, true, plan);
+				UpdateReset, NULL, UpdateClone, UpdateFree, Emit, true, plan);
 
 	// iterate over all update expressions
 	// set the record index for every entity modified by this operation
@@ -51,6 +52,10 @@ OpBase *NewUpdateOp(const ExecutionPlan *plan, rax *update_exps) {
 	}
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static OpResult UpdateInit(OpBase *opBase) {

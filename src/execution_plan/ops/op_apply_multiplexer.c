@@ -14,6 +14,7 @@ static Record AndMultiplexer_Consume(OpBase *opBase);
 static OpResult OpApplyMultiplexerReset(OpBase *opBase);
 static OpBase *OpApplyMultiplexerClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void OpApplyMultiplexerFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 static Record _pullFromBranchStream(OpApplyMultiplexer *op, int branch_index) {
 	// Propegate record to the top of the match stream.
@@ -29,15 +30,19 @@ OpBase *NewApplyMultiplexerOp(const ExecutionPlan *plan, AST_Operator boolean_op
 	if(boolean_operator == OP_OR) {
 		OpBase_Init((OpBase *)op, OPType_OR_APPLY_MULTIPLEXER, "OR Apply Multiplexer",
 					OpApplyMultiplexerInit, OrMultiplexer_Consume, OpApplyMultiplexerReset, NULL,
-					OpApplyMultiplexerClone, OpApplyMultiplexerFree, false, plan);
+					OpApplyMultiplexerClone, OpApplyMultiplexerFree, Emit, false, plan);
 	} else if(boolean_operator == OP_AND) {
 		OpBase_Init((OpBase *)op, OPType_AND_APPLY_MULTIPLEXER, "AND Apply Multiplexer",
 					OpApplyMultiplexerInit, AndMultiplexer_Consume, OpApplyMultiplexerReset, NULL,
-					OpApplyMultiplexerClone, OpApplyMultiplexerFree, false, plan);
+					OpApplyMultiplexerClone, OpApplyMultiplexerFree, Emit, false, plan);
 	} else {
 		ASSERT("apply multiplexer boolean operator should be AND or OR only" && false);
 	}
 	return (OpBase *) op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 /* Sorts the multiplexer children. Apply operations to the very end (rightmost),

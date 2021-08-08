@@ -35,6 +35,7 @@ CFLAGS = \
 	-fPIC -fcommon -fopenmp \
 	-D_GNU_SOURCE -DREDIS_MODULE_TARGET -DREDISMODULE_EXPERIMENTAL_API -DXXH_STATIC_LINKING_ONLY
 CFLAGS += $(DEBUGFLAGS)
+CFLAGS += -g `llvm-config --cflags --libs core executionengine mcjit interpreter analysis native bitwriter --system-libs`
 
 # Compile flags for linux / osx
 ifeq ($(uname_S),Linux)
@@ -45,6 +46,7 @@ else
 	export OS = Mac
 endif
 SHOBJ_LDFLAGS += $(LDFLAGS)
+SHOBJ_LDFLAGS += -g `llvm-config --ldflags --libs core executionengine mcjit interpreter analysis native bitwriter --system-libs`
 export CFLAGS
 
 #----------------------------------------------------------------------------------------------
@@ -143,6 +145,7 @@ CC_SOURCES += $(wildcard $(SOURCEDIR)/serializers/decoders/prev/*.c)
 CC_SOURCES += $(wildcard $(SOURCEDIR)/serializers/decoders/prev/*/*.c)
 CC_SOURCES += $(wildcard $(SOURCEDIR)/grouping/*.c)
 CC_SOURCES += $(wildcard $(SOURCEDIR)/index/*.c)
+CC_SOURCES += $(wildcard $(SOURCEDIR)/jit/*.c)
 CC_SOURCES += $(wildcard $(SOURCEDIR)/ast/*.c)
 CC_SOURCES += $(wildcard $(SOURCEDIR)/ast/enrichment/*.c)
 CC_SOURCES += $(wildcard $(SOURCEDIR)/resultset/*.c)

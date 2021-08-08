@@ -10,6 +10,7 @@
 static Record OptionalConsume(OpBase *opBase);
 static OpResult OptionalReset(OpBase *opBase);
 static OpBase *OptionalClone(const ExecutionPlan *plan, const OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 OpBase *NewOptionalOp(const ExecutionPlan *plan) {
 	Optional *op = rm_malloc(sizeof(Optional));
@@ -17,9 +18,13 @@ OpBase *NewOptionalOp(const ExecutionPlan *plan) {
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_OPTIONAL, "Optional", NULL, OptionalConsume,
-				OptionalReset, NULL, OptionalClone, NULL, false, plan);
+				OptionalReset, NULL, OptionalClone, NULL, Emit, false, plan);
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static Record OptionalConsume(OpBase *opBase) {

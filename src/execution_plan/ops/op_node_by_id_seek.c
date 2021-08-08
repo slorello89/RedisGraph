@@ -16,6 +16,7 @@ static Record NodeByIdSeekConsumeFromChild(OpBase *opBase);
 static OpResult NodeByIdSeekReset(OpBase *opBase);
 static OpBase *NodeByIdSeekClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void NodeByIdSeekFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 static inline int NodeByIdSeekToString(const OpBase *ctx, char *buf, uint buf_len) {
 	return ScanToString(ctx, buf, buf_len, ((NodeByIdSeek *)ctx)->alias, NULL);
@@ -46,11 +47,15 @@ OpBase *NewNodeByIdSeekOp(const ExecutionPlan *plan, const char *alias, Unsigned
 
 	OpBase_Init((OpBase *)op, OPType_NODE_BY_ID_SEEK, "NodeByIdSeek", NodeByIdSeekInit,
 				NodeByIdSeekConsume, NodeByIdSeekReset, NodeByIdSeekToString, NodeByIdSeekClone, NodeByIdSeekFree,
-				false, plan);
+				Emit, false, plan);
 
 	op->nodeRecIdx = OpBase_Modifies((OpBase *)op, alias);
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static OpResult NodeByIdSeekInit(OpBase *opBase) {

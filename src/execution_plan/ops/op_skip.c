@@ -14,6 +14,7 @@ static Record SkipConsume(OpBase *opBase);
 static OpResult SkipReset(OpBase *opBase);
 static void SkipFree(OpBase *opBase);
 static OpBase *SkipClone(const ExecutionPlan *plan, const OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 static void _eval_skip(OpSkip *op, AR_ExpNode *skip_exp) {
 	/* Store a copy of the original expression.
@@ -46,9 +47,13 @@ OpBase *NewSkipOp(const ExecutionPlan *plan, AR_ExpNode *skip_exp) {
 
 	// set operations
 	OpBase_Init((OpBase *)op, OPType_SKIP, "Skip", NULL, SkipConsume, SkipReset, NULL, SkipClone,
-				SkipFree, false, plan);
+				SkipFree, Emit, false, plan);
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static Record SkipConsume(OpBase *opBase) {

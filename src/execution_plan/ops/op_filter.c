@@ -11,6 +11,7 @@
 static Record FilterConsume(OpBase *opBase);
 static OpBase *FilterClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void FilterFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 OpBase *NewFilterOp(const ExecutionPlan *plan, FT_FilterNode *filterTree) {
 	OpFilter *op = rm_malloc(sizeof(OpFilter));
@@ -18,9 +19,13 @@ OpBase *NewFilterOp(const ExecutionPlan *plan, FT_FilterNode *filterTree) {
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_FILTER, "Filter", NULL, FilterConsume,
-				NULL, NULL, FilterClone, FilterFree, false, plan);
+				NULL, NULL, FilterClone, FilterFree, Emit, false, plan);
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 /* FilterConsume next operation

@@ -16,6 +16,7 @@ static OpResult DistinctInit(OpBase *opBase);
 static Record DistinctConsume(OpBase *opBase);
 static OpBase *DistinctClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void DistinctFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 // compute hash on distinct values
 // values that are required to be distinct are located at 'offset'
@@ -108,9 +109,13 @@ OpBase *NewDistinctOp(const ExecutionPlan *plan) {
 	op->offset_count    =  0;
 
 	OpBase_Init((OpBase *)op, OPType_DISTINCT, "Distinct", DistinctInit, DistinctConsume,
-				NULL, NULL, DistinctClone, DistinctFree, false, plan);
+				NULL, NULL, DistinctClone, DistinctFree, Emit, false, plan);
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static OpResult DistinctInit(OpBase *opBase) {

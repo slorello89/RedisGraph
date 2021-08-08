@@ -19,6 +19,7 @@ static Record UnwindConsume(OpBase *opBase);
 static OpResult UnwindReset(OpBase *opBase);
 static OpBase *UnwindClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void UnwindFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 OpBase *NewUnwindOp(const ExecutionPlan *plan, AR_ExpNode *exp) {
 	OpUnwind *op = rm_malloc(sizeof(OpUnwind));
@@ -30,10 +31,14 @@ OpBase *NewUnwindOp(const ExecutionPlan *plan, AR_ExpNode *exp) {
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_UNWIND, "Unwind", UnwindInit, UnwindConsume,
-				UnwindReset, NULL, UnwindClone, UnwindFree, false, plan);
+				UnwindReset, NULL, UnwindClone, UnwindFree, Emit, false, plan);
 
 	op->unwindRecIdx = OpBase_Modifies((OpBase *)op, exp->resolved_name);
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 /* Evaluate list expression, raise runtime exception

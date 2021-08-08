@@ -15,6 +15,7 @@ static Record IndexScanConsume(OpBase *opBase);
 static Record IndexScanConsumeFromChild(OpBase *opBase);
 static OpResult IndexScanReset(OpBase *opBase);
 static void IndexScanFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 static int IndexScanToString(const OpBase *ctx, char *buf, uint buf_len) {
 	IndexScan *op = (IndexScan *)ctx;
@@ -41,10 +42,14 @@ OpBase *NewIndexScanOp(const ExecutionPlan *plan, Graph *g, NodeScanCtx n,
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_INDEX_SCAN, "Index Scan", IndexScanInit, IndexScanConsume,
-				IndexScanReset, IndexScanToString, NULL, IndexScanFree, false, plan);
+				IndexScanReset, IndexScanToString, NULL, IndexScanFree, Emit, false, plan);
 
 	op->nodeRecIdx = OpBase_Modifies((OpBase *)op, n.alias);
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 static OpResult IndexScanInit(OpBase *opBase) {

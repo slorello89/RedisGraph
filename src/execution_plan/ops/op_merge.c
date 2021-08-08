@@ -19,6 +19,7 @@ static OpResult MergeInit(OpBase *opBase);
 static Record MergeConsume(OpBase *opBase);
 static OpBase *MergeClone(const ExecutionPlan *plan, const OpBase *opBase);
 static void MergeFree(OpBase *opBase);
+static bool Emit(OpBase *opBase);
 
 //------------------------------------------------------------------------------
 // ON MATCH / ON CREATE logic
@@ -73,12 +74,16 @@ OpBase *NewMergeOp(const ExecutionPlan *plan, rax *on_match, rax *on_create) {
 	op->pending_updates  =  NULL;
 	// set our Op operations
 	OpBase_Init((OpBase *)op, OPType_MERGE, "Merge", MergeInit, MergeConsume, NULL, NULL, MergeClone,
-				MergeFree, true, plan);
+				MergeFree, Emit, true, plan);
 
 	if(op->on_match) _InitializeUpdates(op, op->on_match, &op->on_match_it);
 	if(op->on_create) _InitializeUpdates(op, op->on_create, &op->on_create_it);
 
 	return (OpBase *)op;
+}
+
+static bool Emit(OpBase *opBase) {
+	return false;
 }
 
 // Modification of ExecutionPlan_LocateOp that only follows LHS child.
