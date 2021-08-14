@@ -315,15 +315,7 @@ cleanup:
 	GraphContext_Release(gc);
 	CommandCtx_Free(command_ctx);
 	QueryCtx_Free(); // Reset the QueryCtx and free its allocations.
-	ErrorCtx_Clear();}
-
-void Graph_Profile(void *args) {
-	_query(true, args);
-}
-
-
-void Graph_Query(void *args) {
-	_query(false, args);
+	ErrorCtx_Clear();
 }
 
 void Graph_Profile(void *args) {

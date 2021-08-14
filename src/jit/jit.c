@@ -26,7 +26,7 @@ static LLVMValueRef GetOrCreateFunction(const char* name) {
 
 	LLVMTypeRef voidPtr = LLVMPointerType(LLVMVoidType(), 0);
 
-	if(name == "ResultSet_AddRecord") {
+	if(strcmp(name, "ResultSet_AddRecord") == 0) {
 		if(ctx->addRecord_func) return ctx->addRecord_func;
 
 		LLVMTypeRef addRecord_params[] = { voidPtr, voidPtr }; 
@@ -36,7 +36,7 @@ static LLVMValueRef GetOrCreateFunction(const char* name) {
 		return ctx->addRecord_func;
 	}
 
-	if(name == "OpBase_CreateRecord") {
+	if(strcmp(name, "OpBase_CreateRecord") == 0) {
 		if(ctx->createRecord_func) return ctx->createRecord_func;
 
 		LLVMTypeRef createRecord_params[] = { voidPtr }; 
@@ -49,7 +49,7 @@ static LLVMValueRef GetOrCreateFunction(const char* name) {
 	LLVMTypeRef x[] = {LLVMInt64Type(), LLVMInt32Type(), LLVMInt32Type()};
 	LLVMTypeRef si_type = LLVMStructType(x, 3, 0);
 
-	if(name == "AR_EXP_Evaluate") {
+	if(strcmp(name, "AR_EXP_Evaluate") == 0) {
 		if(ctx->AR_EXP_Evaluate_func) return ctx->AR_EXP_Evaluate_func;
 
 		LLVMTypeRef AR_EXP_Evaluate_params[] = { voidPtr, voidPtr }; 
@@ -59,7 +59,7 @@ static LLVMValueRef GetOrCreateFunction(const char* name) {
 		return ctx->AR_EXP_Evaluate_func;
 	}
 
-	if(name == "Record_Add") {
+	if(strcmp(name, "Record_Add") == 0) {
 		if(ctx->addToRecord_func) return ctx->addToRecord_func;
 
 		LLVMTypeRef addRecord_params[] = { voidPtr, LLVMInt32Type(), si_type }; 
@@ -74,7 +74,7 @@ static LLVMValueRef GetOrCreateFunction(const char* name) {
 
 static LLVMValueRef GetOrCreateGlobal(const char* name, void* value) {
 	EmitCtx *ctx = EmitCtx_Get();
-    LLVMValueRef global = LLVMGetNamedGlobal(ctx->module, name);
+	LLVMValueRef global = LLVMGetNamedGlobal(ctx->module, name);
 	if(global) return global;
 
 	LLVMTypeRef voidPtr = LLVMPointerType(LLVMVoidType(), 0);
@@ -87,13 +87,16 @@ static LLVMValueRef GetOrCreateGlobal(const char* name, void* value) {
 	return global;
 }
 
+static const char str_rs[] = "rs";
+static const char str_op[] = "op";
+
 void JIT_Result(void *rsVal) {
 	LLVMTypeRef voidPtr = LLVMPointerType(LLVMVoidType(), 0);
 
 	EmitCtx *ctx = EmitCtx_Get();
 
 	LLVMValueRef addRecord_func = GetOrCreateFunction("ResultSet_AddRecord");
-	LLVMValueRef rs = GetOrCreateGlobal("rs", rsVal);
+	LLVMValueRef rs = GetOrCreateGlobal(str_rs, rsVal);
 	LLVMValueRef local = LLVMBuildLoad2(ctx->builder, voidPtr, rs, "local");
 
 
@@ -110,7 +113,7 @@ void JIT_Project(void *opBase, AR_ExpNode **exps, uint exp_count, uint *record_o
 	LLVMValueRef addRecord_func = GetOrCreateFunction("Record_Add");
 	LLVMValueRef AR_EXP_Evaluate_func = GetOrCreateFunction("AR_EXP_Evaluate");
 
-	LLVMValueRef global = GetOrCreateGlobal("op", opBase);
+	LLVMValueRef global = GetOrCreateGlobal(str_op, opBase);
 	LLVMValueRef local = LLVMBuildLoad2(ctx->builder, voidPtr, global, "local");
 	LLVMValueRef args[] = {local};
 	LLVMValueRef r = LLVMBuildCall2(ctx->builder, LLVMGetReturnType(LLVMTypeOf(createRecord_func)), createRecord_func, args, 1, "call");

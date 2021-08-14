@@ -139,7 +139,7 @@ void OpBase_UpdateConsume(OpBase *op, fpConsume consume) {
 	else op->consume = consume;
 }
 
-inline Record OpBase_CreateRecord(const OpBase *op) {
+Record OpBase_CreateRecord(const OpBase *op) {
 	return ExecutionPlan_BorrowRecord((struct ExecutionPlan *)op->plan);
 }
 

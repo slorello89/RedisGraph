@@ -16,7 +16,7 @@ typedef struct {
 	LLVMValueRef createRecord_func;
 	LLVMValueRef AR_EXP_Evaluate_func;
 	LLVMValueRef r;
-	void *arr;
+	void **arr;
 } EmitCtx;
 
 void EmitCtx_Init();

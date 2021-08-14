@@ -402,6 +402,8 @@ ResultSet *ExecutionPlan_Execute(ExecutionPlan *plan) {
 
 ResultSet *ExecutionPlan_JIT(ExecutionPlan *plan) {
 	ASSERT(plan->prepared)
+
+	ExecutionPlan_Init(plan);
 	
 	EmitCtx_Init();
 
@@ -446,7 +448,13 @@ ResultSet *ExecutionPlan_JIT(ExecutionPlan *plan) {
 		LLVMDisposeMessage(error);
 	}
 
-
+	int len = array_len(emit_ctx->arr);
+	for (size_t i = 0; i < len; i+=2)
+	{
+		LLVMValueRef global = emit_ctx->arr[i];
+		LLVMAddGlobalMapping(engine, global, &emit_ctx->arr[i+1]);		
+	}
+	
 	LLVMAddGlobalMapping(engine, emit_ctx->addRecord_func, ResultSet_AddRecord);
 	LLVMAddGlobalMapping(engine, emit_ctx->addToRecord_func, Record_Add);
 	LLVMAddGlobalMapping(engine, emit_ctx->createRecord_func, OpBase_CreateRecord);

@@ -118,7 +118,7 @@ OpBase *NewCondTraverseOp(const ExecutionPlan *plan, Graph *g, AlgebraicExpressi
 }
 
 static bool Emit(OpBase *opBase) {
-
+	return false;
 }
 
 static OpResult CondTraverseInit(OpBase *opBase) {
