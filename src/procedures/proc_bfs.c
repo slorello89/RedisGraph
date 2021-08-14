@@ -123,14 +123,7 @@ static ProcedureResult Proc_BFS_Invoke(ProcedureCtx *ctx,
 
 		bfs_ctx->reltype_id = s->id;
 		RG_Matrix_export(&R, Graph_GetRelationMatrix(gc->g, s->id, false));
-		bool maintain_transpose;
-		Config_Option_get(Config_MAINTAIN_TRANSPOSE, &maintain_transpose);
-		if(maintain_transpose) {
-			RG_Matrix_export(&TR,
-				Graph_GetRelationMatrix(gc->g, s->id, true));
-		} else {
-			TR = GrB_NULL;
-		}
+		RG_Matrix_export(&TR, Graph_GetRelationMatrix(gc->g, s->id, true));
 	}
 
 	/* If we're not collecting edges, pass a NULL parent pointer
@@ -189,12 +182,12 @@ static SIValue *Proc_BFS_Step(ProcedureCtx *ctx) {
 	NodeID id;
 	GrB_Info res;
 	bool depleted;
-	GxB_MatrixTupleIter *iter;
+	GxB_MatrixTupleIter iter;
 
 	UNUSED(res);
-	res = GxB_MatrixTupleIter_new(&iter, (GrB_Matrix)bfs_ctx->nodes);
+	res = GxB_MatrixTupleIter_reuse(&iter, (GrB_Matrix)bfs_ctx->nodes);
 	ASSERT(res == GrB_SUCCESS);
-	res = GxB_MatrixTupleIter_next(iter, NULL, &id, NULL, &depleted);
+	res = GxB_MatrixTupleIter_next(&iter, NULL, &id, NULL, &depleted);
 	ASSERT(res == GrB_SUCCESS);
 
 	while(!depleted) {
@@ -219,7 +212,7 @@ static SIValue *Proc_BFS_Step(ProcedureCtx *ctx) {
 			SIArray_Append(&edges, SI_Edge(edge));
 		}
 
-		res = GxB_MatrixTupleIter_next(iter, NULL, &id, NULL, &depleted);
+		res = GxB_MatrixTupleIter_next(&iter, NULL, &id, NULL, &depleted);
 		ASSERT(res == GrB_SUCCESS);
 	}
 
@@ -231,7 +224,6 @@ static SIValue *Proc_BFS_Step(ProcedureCtx *ctx) {
 
 	// Clean up.
 	array_free(edge);
-	GxB_MatrixTupleIter_free(&iter);
 
 	return bfs_ctx->output;
 }

@@ -178,7 +178,7 @@ static void _ExecuteQuery(void *args) {
 	if(exec_type == EXECUTION_TYPE_QUERY) {  // query operation
 		// set policy after lock acquisition,
 		// avoid resetting policies between readers and writers
-		Graph_SetMatrixPolicy(gc->g, SYNC_AND_MINIMIZE_SPACE);
+		Graph_SetMatrixPolicy(gc->g, SYNC_POLICY_FLUSH_RESIZE);
 
 		ExecutionPlan_PreparePlan(plan);
 		if(profile) {
@@ -249,17 +249,23 @@ static void _DelegateWriter(GraphQueryCtx *gq_ctx) {
 }
 
 void _query(bool profile, void *args) {
-	CommandCtx *command_ctx = (CommandCtx *)args;
-	RedisModuleCtx *ctx     = CommandCtx_GetRedisCtx(command_ctx);
-	GraphContext *gc        = CommandCtx_GetGraphContext(command_ctx);
+	CommandCtx     *command_ctx = (CommandCtx *)args;
+	RedisModuleCtx *ctx         = CommandCtx_GetRedisCtx(command_ctx);
+	GraphContext   *gc          = CommandCtx_GetGraphContext(command_ctx);
+	ExecutionCtx   *exec_ctx    = NULL;
 
 	CommandCtx_TrackCtx(command_ctx);
 	QueryCtx_SetGlobalExecutionCtx(command_ctx);
 
+	if(strcmp(command_ctx->query, "") == 0) {
+		ErrorCtx_SetError("Error: empty query.");
+		goto cleanup;
+	}
+
 	QueryCtx_BeginTimer(); // Start query timing.
 
 	// parse query parameters and build an execution plan or retrieve it from the cache
-	ExecutionCtx *exec_ctx = ExecutionCtx_FromQuery(command_ctx->query);
+	exec_ctx = ExecutionCtx_FromQuery(command_ctx->query);
 	if(exec_ctx == NULL) goto cleanup;
 
 	ExecutionType exec_type = exec_ctx->exec_type;
@@ -320,3 +326,10 @@ void Graph_Query(void *args) {
 	_query(false, args);
 }
 
+void Graph_Profile(void *args) {
+	_query(true, args);
+}
+
+void Graph_Query(void *args) {
+	_query(false, args);
+}

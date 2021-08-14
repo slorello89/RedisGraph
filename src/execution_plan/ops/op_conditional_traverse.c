@@ -20,8 +20,8 @@ static OpBase *CondTraverseClone(const ExecutionPlan *plan, const OpBase *opBase
 static void CondTraverseFree(OpBase *opBase);
 static bool Emit(OpBase *opBase);
 
-static int CondTraverseToString(const OpBase *ctx, char *buf, uint buf_len) {
-	return TraversalToString(ctx, buf, buf_len, ((const OpCondTraverse *)ctx)->ae);
+static void CondTraverseToString(const OpBase *ctx, sds *buf) {
+	TraversalToString(ctx, buf, ((const OpCondTraverse *)ctx)->ae);
 }
 
 static void _populate_filter_matrix(OpCondTraverse *op) {

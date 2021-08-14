@@ -20,9 +20,9 @@ static OpBase *NodeByLabelScanClone(const ExecutionPlan *plan, const OpBase *opB
 static void NodeByLabelScanFree(OpBase *opBase);
 static bool Emit(OpBase *opBase);
 
-static inline int NodeByLabelScanToString(const OpBase *ctx, char *buf, uint buf_len) {
+static inline void NodeByLabelScanToString(const OpBase *ctx, sds *buf) {
 	NodeByLabelScan *op = (NodeByLabelScan *)ctx;
-	return ScanToString(ctx, buf, buf_len, op->n.alias, op->n.label);
+	ScanToString(ctx, buf, op->n.alias, op->n.label);
 }
 
 OpBase *NewNodeByLabelScanOp(const ExecutionPlan *plan, NodeScanCtx n) {

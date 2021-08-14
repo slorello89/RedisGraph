@@ -17,8 +17,8 @@ static OpBase *AllNodeScanClone(const ExecutionPlan *plan, const OpBase *opBase)
 static void AllNodeScanFree(OpBase *opBase);
 static bool Emit(OpBase *opBase);
 
-static inline int AllNodeScanToString(const OpBase *ctx, char *buf, uint buf_len) {
-	return ScanToString(ctx, buf, buf_len, ((AllNodeScan *)ctx)->alias, NULL);
+static inline void AllNodeScanToString(const OpBase *ctx, sds *buf) {
+	return ScanToString(ctx, buf, ((AllNodeScan *)ctx)->alias, NULL);
 }
 
 OpBase *NewAllNodeScanOp(const ExecutionPlan *plan, const char *alias) {

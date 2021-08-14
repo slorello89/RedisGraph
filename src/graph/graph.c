@@ -215,6 +215,22 @@ void _MatrixNOP
 	return;
 }
 
+MATRIX_POLICY Graph_GetMatrixPolicy
+(
+	const Graph *g
+) {
+	ASSERT(g != NULL);
+	MATRIX_POLICY policy = SYNC_POLICY_UNKNOWN;
+	SyncMatrixFunc f = g->SynchronizeMatrix;
+
+	if      (f == _MatrixSynchronize)      policy = SYNC_POLICY_FLUSH_RESIZE;
+	else if (f == _MatrixResizeToCapacity) policy = SYNC_POLICY_RESIZE;
+	else if (f == _MatrixNOP)              policy = SYNC_POLICY_NOP;
+	else ASSERT(false);
+
+	return policy;
+}
+
 // define the current behavior for matrix creations and retrievals on this graph
 void Graph_SetMatrixPolicy
 (
@@ -222,17 +238,17 @@ void Graph_SetMatrixPolicy
 	MATRIX_POLICY policy
 ) {
 	switch(policy) {
-		case SYNC_AND_MINIMIZE_SPACE:
+		case SYNC_POLICY_FLUSH_RESIZE:
 			// Default behavior; forces execution of pending GraphBLAS operations
 			// when appropriate and sizes matrices to the current node count.
 			g->SynchronizeMatrix = _MatrixSynchronize;
 			break;
-		case RESIZE_TO_CAPACITY:
+		case SYNC_POLICY_RESIZE:
 			// Bulk insertion and creation behavior; does not force pending operations
 			// and resizes matrices to the graph's current node capacity.
 			g->SynchronizeMatrix = _MatrixResizeToCapacity;
 			break;
-		case DISABLED:
+		case SYNC_POLICY_NOP:
 			// Used when deleting or freeing a graph; forces no matrix updates or resizes.
 			g->SynchronizeMatrix = _MatrixNOP;
 			break;
@@ -246,19 +262,14 @@ void Graph_ApplyAllPending
 (
 	Graph *g
 ) {
-	RG_Matrix M;
-	M = Graph_GetAdjacencyMatrix(g, false);
-	RG_Matrix_wait(M, true);
+	uint n = 0;
+	Graph_GetAdjacencyMatrix(g, false);
 
-	for(int i = 0; i < array_len(g->labels); i ++) {
-		M = Graph_GetLabelMatrix(g, i);
-		RG_Matrix_wait(M, true);
-	}
+	n = array_len(g->labels);
+	for(int i = 0; i < n; i ++) Graph_GetLabelMatrix(g, i);
 
-	for(int i = 0; i < array_len(g->relations); i ++) {
-		M = Graph_GetRelationMatrix(g, i, false);
-		RG_Matrix_wait(M, true);
-	}
+	n = array_len(g->relations);
+	for(int i = 0; i < n; i ++) Graph_GetRelationMatrix(g, i, false);
 }
 
 //------------------------------------------------------------------------------
@@ -299,7 +310,7 @@ Graph *Graph_New
 	g->_writelocked = false;
 
 	// force GraphBLAS updates and resize matrices to node count by default
-	Graph_SetMatrixPolicy(g, SYNC_AND_MINIMIZE_SPACE);
+	Graph_SetMatrixPolicy(g, SYNC_POLICY_FLUSH_RESIZE);
 
 	return g;
 }
@@ -601,8 +612,9 @@ void Graph_GetNodeEdges
 	ASSERT(n);
 	ASSERT(edges);
 
+	RG_MatrixTupleIter   it;
 	RG_Matrix            M        =  NULL;
-	RG_MatrixTupleIter  *it       =  NULL;
+	RG_Matrix            TM       =  NULL;
 	NodeID               srcID    =  ENTITY_GET_ID(n);
 	NodeID               destID   =  INVALID_ENTITY_ID;
 	EdgeID               edgeID   =  INVALID_ENTITY_ID;
@@ -616,17 +628,17 @@ void Graph_GetNodeEdges
 	bool incoming = (dir == GRAPH_EDGE_DIR_INCOMING ||
 					 dir == GRAPH_EDGE_DIR_BOTH);
 
-	if(outgoing) {
-		// if a relationship type is specified,
-		// retrieve the appropriate relation matrix
-		// otherwise use the overall adjacency matrix
-		M = Graph_GetRelationMatrix(g, edgeType, false);
+	// if a relationship type is specified,
+	// retrieve the appropriate relation matrix
+	// otherwise use the overall adjacency matrix
+	M = Graph_GetRelationMatrix(g, edgeType, false);
 
+	if(outgoing) {
 		// construct an iterator to traverse over the source node row,
 		// containing all outgoing edges
-		RG_MatrixTupleIter_new(&it, M);
-		RG_MatrixTupleIter_iterate_row(it, srcID);
-		while(RG_MatrixTupleIter_next(it, NULL, &destID, &edgeID, &depleted) == GrB_SUCCESS) {
+		RG_MatrixTupleIter_reuse(&it, M);
+		RG_MatrixTupleIter_iterate_row(&it, srcID);
+		while(RG_MatrixTupleIter_next(&it, NULL, &destID, &edgeID, &depleted) == GrB_SUCCESS) {
 			if(depleted) break;
 
 			// collect all edges (src)->(dest)
@@ -636,22 +648,22 @@ void Graph_GetNodeEdges
 				Graph_GetEdgesConnectingNodes(g, srcID, destID, edgeType, edges);
 			}
 		}
-		RG_MatrixTupleIter_free(&it);
 	}
 
 	if(incoming) {
 		// if a relationship type is specified, retrieve the appropriate
 		// transposed relation matrix,
 		// otherwise use the transposed adjacency matrix
-		M = Graph_GetRelationMatrix(g, edgeType, true);
+		TM = Graph_GetRelationMatrix(g, edgeType, true);
 
 		// construct an iterator to traverse over the source node row,
 		// containing all incoming edges
-		RG_MatrixTupleIter_new(&it, M);
-		RG_MatrixTupleIter_iterate_row(it, srcID);
+		RG_MatrixTupleIter_reuse(&it, TM);
+		RG_MatrixTupleIter_iterate_row(&it, srcID);
 
-		while(RG_MatrixTupleIter_next(it, NULL, &destID, &edgeID, &depleted) == GrB_SUCCESS) {
+		while(RG_MatrixTupleIter_next(&it, NULL, &destID, NULL, &depleted) == GrB_SUCCESS) {
 			if(depleted) break;
+			RG_Matrix_extractElement_UINT64(&edgeID, M, destID, srcID);
 			// collect all edges connecting destId to srcId
 			if(edgeType != GRAPH_NO_RELATION) {
 				_CollectEdgesFromEntry(g, destID, srcID, edgeType, edgeID, edges);
@@ -659,9 +671,6 @@ void Graph_GetNodeEdges
 				Graph_GetEdgesConnectingNodes(g, destID, srcID, edgeType, edges);
 			}
 		}
-
-		// Clean up
-		RG_MatrixTupleIter_free(&it);
 	}
 }
 
@@ -679,7 +688,6 @@ int Graph_DeleteEdge
 	RG_Matrix   M;
 	GrB_Info    info;
 	EdgeID      edge_id;
-	RG_Matrix   TR        =  GrB_NULL;
 	int         r         =  Edge_GetRelationID(e);
 	NodeID      src_id    =  Edge_GetSrcNodeID(e);
 	NodeID      dest_id   =  Edge_GetDestNodeID(e);
