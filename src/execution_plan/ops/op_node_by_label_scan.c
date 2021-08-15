@@ -34,6 +34,7 @@ OpBase *NewNodeByLabelScanOp(const ExecutionPlan *plan, NodeScanCtx n) {
 	op->child_record = NULL;
 	// Defaults to [0...UINT64_MAX].
 	op->id_range = UnsignedRange_New();
+	op->op.emitPhase = 0;
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_NODE_BY_LABEL_SCAN, "Node By Label Scan", NodeByLabelScanInit,
@@ -46,6 +47,13 @@ OpBase *NewNodeByLabelScanOp(const ExecutionPlan *plan, NodeScanCtx n) {
 }
 
 static bool Emit(OpBase *opBase) {
+	if (opBase->emitPhase == 0) {
+		NodeByLabelScan *op = (NodeByLabelScan *)opBase;
+		opBase->emitPhase = 1;
+		JIT_LabelScan(op->iter, op->nodeRecIdx);
+		return true;
+	}
+	opBase->emitPhase = 0;
 	return false;
 }
 
@@ -128,7 +136,7 @@ static inline void _UpdateRecord(NodeByLabelScan *op, Record r, GrB_Index node_i
 	// Populate the Record with the graph entity data.
 	Node n = GE_NEW_LABELED_NODE(op->n.label, op->n.label_id);
 	Graph_GetNode(op->g, node_id, &n);
-	Record_AddNode(r, op->nodeRecIdx, n);
+	Record_AddNode(r, op->nodeRecIdx, &n);
 }
 
 static inline void _ResetIterator(NodeByLabelScan *op) {

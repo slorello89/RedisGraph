@@ -190,7 +190,7 @@ static Record CondTraverseConsume(OpBase *opBase) {
 	 * create an unlabeled node. */
 	Node destNode = GE_NEW_LABELED_NODE(op->dest_label, op->dest_label_id);
 	Graph_GetNode(op->graph, dest_id, &destNode);
-	Record_AddNode(op->r, op->destNodeIdx, destNode);
+	Record_AddNode(op->r, op->destNodeIdx, &destNode);
 
 	if(op->edge_ctx) {
 		Node *srcNode = Record_GetNode(op->r, op->srcNodeIdx);

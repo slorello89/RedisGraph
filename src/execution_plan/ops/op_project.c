@@ -43,11 +43,22 @@ OpBase *NewProjectOp(const ExecutionPlan *plan, AR_ExpNode **exps) {
 static bool Emit(OpBase *opBase) {
 	OpProject *op = (OpProject *)opBase;
 	
-	if(op->singleResponse) return false;
-	op->singleResponse = true;
+	bool hasResult = false;
+	if(op->op.childCount) {
+		OpBase *child = op->op.children[0];
+		hasResult = OpBase_Emit(child);
+	} else {
+		if(op->singleResponse) return false;
+		op->singleResponse = true;
+		hasResult = true;
+	}
 
-	JIT_Project(opBase, op->exps, op->exp_count, op->record_offsets);
-	return true;
+	if(hasResult) {
+		JIT_Project(opBase, op->exps, op->exp_count, op->record_offsets);
+		return true;
+	}
+	
+	return false;
 }
 
 static Record ProjectConsume(OpBase *opBase) {

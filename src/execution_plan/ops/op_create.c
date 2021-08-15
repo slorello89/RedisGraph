@@ -61,7 +61,7 @@ static void _CreateNodes(OpCreate *op, Record r) {
 		Node newNode = GE_NEW_LABELED_NODE(n->label, n->labelId);
 
 		// add new node to Record and save a reference to it
-		Node *node_ref = Record_AddNode(r, op->pending.nodes_to_create[i].node_idx, newNode);
+		Node *node_ref = Record_AddNode(r, op->pending.nodes_to_create[i].node_idx, &newNode);
 
 		// convert query-level properties
 		PropertyMap *map = op->pending.nodes_to_create[i].properties;

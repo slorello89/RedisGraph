@@ -30,7 +30,8 @@ OpBase *NewResultsOp(const ExecutionPlan *plan) {
 static bool Emit(OpBase *opBase) {
 	Results *op = (Results *)opBase;
 
-	if(OpBase_Emit(opBase->children[0])) {
+	JIT_CreateRecord(opBase);
+	while(OpBase_Emit(opBase->children[0])) {
 		JIT_Result(op->result_set);
 		return true;
 	}

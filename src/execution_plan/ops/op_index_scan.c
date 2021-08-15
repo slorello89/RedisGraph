@@ -83,7 +83,7 @@ static inline void _UpdateRecord(IndexScan *op, Record r, EntityID node_id) {
 	Node n = GE_NEW_LABELED_NODE(op->n.label, op->n.label_id);
 	int res = Graph_GetNode(op->g, node_id, &n);
 	ASSERT(res != 0);
-	Record_AddNode(r, op->nodeRecIdx, n);
+	Record_AddNode(r, op->nodeRecIdx, &n);
 }
 
 static inline bool _PassUnresolvedFilters(const IndexScan *op, Record r) {

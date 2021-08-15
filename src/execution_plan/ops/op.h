@@ -115,6 +115,7 @@ struct OpBase {
 	struct OpBase *parent;      // Parent operations.
 	const struct ExecutionPlan *plan; // ExecutionPlan this operation is part of.
 	bool writer;             // Indicates this is a writer operation.
+	int emitPhase;
 };
 typedef struct OpBase OpBase;
 

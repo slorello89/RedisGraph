@@ -417,8 +417,10 @@ ResultSet *ExecutionPlan_JIT(ExecutionPlan *plan) {
     LLVMBuilderRef builder = LLVMCreateBuilder();
     LLVMPositionBuilderAtEnd(builder, entry);
 
+	GraphContext *gc = QueryCtx_GetGraphCtx();
+	JIT_Init(gc->g);
 	emit_ctx->builder = builder;
-	while(OpBase_Emit(plan->root)) {}
+	OpBase_Emit(plan->root);
 	
 	LLVMBuildRetVoid(builder);
 
@@ -459,10 +461,18 @@ ResultSet *ExecutionPlan_JIT(ExecutionPlan *plan) {
 	LLVMAddGlobalMapping(engine, emit_ctx->addToRecord_func, Record_Add);
 	LLVMAddGlobalMapping(engine, emit_ctx->createRecord_func, OpBase_CreateRecord);
 	LLVMAddGlobalMapping(engine, emit_ctx->AR_EXP_Evaluate_func, AR_EXP_Evaluate);
+	if(emit_ctx->iter_next_func)
+		LLVMAddGlobalMapping(engine, emit_ctx->iter_next_func, RG_MatrixTupleIter_next);
+	if(emit_ctx->getNode_func)
+		LLVMAddGlobalMapping(engine, emit_ctx->getNode_func, Graph_GetNode);
+	if(emit_ctx->addNode_func)
+		LLVMAddGlobalMapping(engine, emit_ctx->addNode_func, Record_AddNode);
 
 
     void (*func)() = (void (*)(void))LLVMGetFunctionAddress(engine, "query");
 	func();
+
+	LLVMDisposeExecutionEngine(engine);
 	
 	return QueryCtx_GetResultSet();
 }

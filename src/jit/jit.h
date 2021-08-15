@@ -15,12 +15,19 @@ typedef struct {
 	LLVMValueRef addToRecord_func;
 	LLVMValueRef createRecord_func;
 	LLVMValueRef AR_EXP_Evaluate_func;
+	LLVMValueRef iter_next_func;
+	LLVMValueRef getNode_func;
+	LLVMValueRef addNode_func;
 	LLVMValueRef r;
+	LLVMValueRef g;
 	void **arr;
 } EmitCtx;
 
 void EmitCtx_Init();
 EmitCtx *EmitCtx_Get();
 
+void JIT_Init(void *g);
+void JIT_CreateRecord(void *opBase);
 void JIT_Result(void *rsVal);
 void JIT_Project(void *opBase, AR_ExpNode **exps, uint exp_count, uint *record_offsets);
+void JIT_LabelScan(void *iter, int nodeIdx);

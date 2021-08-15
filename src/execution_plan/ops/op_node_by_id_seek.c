@@ -111,7 +111,7 @@ static Record NodeByIdSeekConsumeFromChild(OpBase *opBase) {
 	Record r = OpBase_CloneRecord(op->child_record);
 
 	// Populate the Record with the actual node.
-	Record_AddNode(r, op->nodeRecIdx, n);
+	Record_AddNode(r, op->nodeRecIdx, &n);
 
 	return r;
 }
@@ -126,7 +126,7 @@ static Record NodeByIdSeekConsume(OpBase *opBase) {
 	Record r = OpBase_CreateRecord(opBase);
 
 	// Populate the Record with the actual node.
-	Record_AddNode(r, op->nodeRecIdx, n);
+	Record_AddNode(r, op->nodeRecIdx, &n);
 
 	return r;
 }
