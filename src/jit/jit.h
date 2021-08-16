@@ -24,7 +24,6 @@ typedef struct {
 	LLVMTypeRef si_type;
 	LLVMTypeRef node_type;
 	LLVMValueRef r;
-	LLVMValueRef g;
 } EmitCtx;
 
 typedef void *(*SymbolResolve)(const char *);

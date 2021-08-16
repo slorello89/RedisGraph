@@ -131,7 +131,7 @@ void JIT_Init(void *g) {
 
 	EmitCtx *ctx = EmitCtx_Get();
 
-	ctx->g = GetOrCreateGlobal(str_g, g);
+	GetOrCreateGlobal(str_g, g);
 }
 
 void JIT_End() {
@@ -308,7 +308,8 @@ void JIT_LabelScan(void *iter, int nodeIdx) {
 	LLVMBuildCall2(ctx->builder, LLVMGetReturnType(LLVMTypeOf(iter_next_func)), iter_next_func, iter_next_params, 5, "call");
 
 	LLVMValueRef node = LLVMBuildAlloca(ctx->builder, ctx->node_type, "node");
-	LLVMValueRef g_local = LLVMBuildLoad2(ctx->builder, ctx->voidPtr, ctx->g, "g");
+	LLVMValueRef g_global = GetOrCreateGlobal(str_g, NULL);
+	LLVMValueRef g_local = LLVMBuildLoad2(ctx->builder, ctx->voidPtr, g_global, "g");
 	LLVMValueRef nodeId_load = LLVMBuildLoad(ctx->builder, nodeId, "nodeId_load");
 	LLVMValueRef getNode_params[] = {g_local, nodeId_load, node};
 	LLVMBuildCall2(ctx->builder, LLVMGetReturnType(LLVMTypeOf(getNode_func)), getNode_func, getNode_params, 3, "call");
