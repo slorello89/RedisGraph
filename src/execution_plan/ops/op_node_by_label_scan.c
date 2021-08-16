@@ -50,10 +50,11 @@ static bool Emit(OpBase *opBase) {
 	if (opBase->emitPhase == 0) {
 		NodeByLabelScan *op = (NodeByLabelScan *)opBase;
 		opBase->emitPhase = 1;
-		JIT_LabelScan(op->iter, op->nodeRecIdx);
+		JIT_StartLabelScan(op->iter, op->nodeRecIdx);
 		return true;
 	}
 	opBase->emitPhase = 0;
+	JIT_EndLabelScan();
 	return false;
 }
 

@@ -18,12 +18,18 @@ typedef struct {
 	LLVMOrcThreadSafeContextRef TSCtx;
 	LLVMContextRef Ctx;
 	LLVMOrcThreadSafeModuleRef TSM;
+	LLVMValueRef query;
 	LLVMTypeRef voidPtr;
+	LLVMTypeRef i1;
+	LLVMTypeRef i8;
 	LLVMTypeRef i32;
 	LLVMTypeRef i64;
 	LLVMTypeRef si_type;
 	LLVMTypeRef node_type;
 	LLVMValueRef r;
+	LLVMBasicBlockRef loop_cond;
+	LLVMBasicBlockRef loop;
+	LLVMBasicBlockRef loop_end;
 } EmitCtx;
 
 typedef void *(*SymbolResolve)(const char *);
@@ -37,4 +43,5 @@ void JIT_Run(SymbolResolve fn);
 void JIT_CreateRecord(void *opBase);
 void JIT_Result(void *rsVal);
 void JIT_Project(void *opBase, AR_ExpNode **exps, uint exp_count, uint *record_offsets);
-void JIT_LabelScan(void *iter, int nodeIdx);
+void JIT_StartLabelScan(void *iter, int nodeIdx);
+void JIT_EndLabelScan();

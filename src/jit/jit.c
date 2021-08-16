@@ -25,6 +25,8 @@ EmitCtx *EmitCtx_Get() {
 		ctx = rm_calloc(1, sizeof(EmitCtx));
 		
 		LLVMInitializeCore(LLVMGetGlobalPassRegistry());
+		LLVMInitializeNativeTarget();
+		LLVMInitializeNativeAsmPrinter();
 
 		ctx->TSCtx = LLVMOrcCreateNewThreadSafeContext();
 		ctx->Ctx = LLVMOrcThreadSafeContextGetContext(ctx->TSCtx);
@@ -32,14 +34,16 @@ EmitCtx *EmitCtx_Get() {
 
 		LLVMTypeRef p[0];
 		LLVMTypeRef func_type = LLVMFunctionType(LLVMVoidTypeInContext(ctx->Ctx), p, 0, false);
-		LLVMValueRef query = LLVMAddFunction(ctx->module, "query", func_type);
+		ctx->query = LLVMAddFunction(ctx->module, "query", func_type);
 	
-		LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(ctx->Ctx, query, "entry");
+		LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(ctx->Ctx, ctx->query, "entry");
 
 		ctx->builder = LLVMCreateBuilder();
 		LLVMPositionBuilderAtEnd(ctx->builder, entry);
 
 		ctx->voidPtr = LLVMPointerType(LLVMVoidTypeInContext(ctx->Ctx), 0);
+		ctx->i1 = LLVMInt1TypeInContext(ctx->Ctx);
+		ctx->i8 = LLVMInt8TypeInContext(ctx->Ctx);
 		ctx->i32 = LLVMInt32TypeInContext(ctx->Ctx);
 		ctx->i64 = LLVMInt64TypeInContext(ctx->Ctx);
 
@@ -183,15 +187,11 @@ static LLVMErrorRef definitionGeneratorFn(LLVMOrcDefinitionGeneratorRef G, void 
 void JIT_Run(SymbolResolve fn) {
 	EmitCtx *ctx = EmitCtx_Get();
 
-	LLVMInitializeNativeTarget();
-	LLVMInitializeNativeAsmPrinter();
-
 	LLVMOrcLLJITRef J;
 	{
 		LLVMErrorRef Err;
 		if ((Err = LLVMOrcCreateLLJIT(&J, 0))) {
 			handleError(Err);
-			goto llvm_shutdown;
 		}
 	}
 
@@ -236,9 +236,6 @@ jit_cleanup:
 	if ((Err = LLVMOrcDisposeLLJIT(J))) {
 		handleError(Err);
 	}
-
-llvm_shutdown:
-	LLVMShutdown();
 }
 
 void JIT_CreateRecord(void *opBase) {
@@ -289,7 +286,7 @@ void JIT_Project(void *opBase, AR_ExpNode **exps, uint exp_count, uint *record_o
 	}
 }
 
-void JIT_LabelScan(void *iter, int nodeIdx) {
+void JIT_StartLabelScan(void *iter, int nodeIdx) {
 	EmitCtx *ctx = EmitCtx_Get();
 
 	LLVMTypeRef i64ptr = LLVMPointerType(ctx->i64, 0);
@@ -303,11 +300,24 @@ void JIT_LabelScan(void *iter, int nodeIdx) {
 
 	LLVMValueRef nodeId = LLVMBuildAlloca(ctx->builder, ctx->i64, "nodeId");
 	LLVMValueRef depleted = LLVMBuildAlloca(ctx->builder, LLVMInt8Type(), "depleted");
+	LLVMValueRef node = LLVMBuildAlloca(ctx->builder, ctx->node_type, "node");
+
+	ctx->loop_cond = LLVMAppendBasicBlockInContext(ctx->Ctx, ctx->query, "ls_loop_cond");
+	ctx->loop = LLVMAppendBasicBlockInContext(ctx->Ctx, ctx->query, "ls_loop");
+	ctx->loop_end = LLVMAppendBasicBlockInContext(ctx->Ctx, ctx->query, "ls_loop_end");
+
+	LLVMBuildBr(ctx->builder, ctx->loop_cond);
+	LLVMPositionBuilderAtEnd(ctx->builder, ctx->loop_cond);
 
 	LLVMValueRef iter_next_params[] = {iter_local, LLVMConstPointerNull(i64ptr), nodeId, LLVMConstPointerNull(ctx->voidPtr), depleted};
 	LLVMBuildCall2(ctx->builder, LLVMGetReturnType(LLVMTypeOf(iter_next_func)), iter_next_func, iter_next_params, 5, "call");
 
-	LLVMValueRef node = LLVMBuildAlloca(ctx->builder, ctx->node_type, "node");
+	LLVMValueRef depleted_load = LLVMBuildLoad2(ctx->builder, ctx->i8, depleted, "depleted");
+	LLVMValueRef depleted_trunc = LLVMBuildTrunc(ctx->builder, depleted_load, ctx->i1, "trunc");
+	LLVMBuildCondBr(ctx->builder, depleted_trunc, ctx->loop_end, ctx->loop);
+
+	LLVMPositionBuilderAtEnd(ctx->builder, ctx->loop);
+
 	LLVMValueRef g_global = GetOrCreateGlobal(str_g, NULL);
 	LLVMValueRef g_local = LLVMBuildLoad2(ctx->builder, ctx->voidPtr, g_global, "g");
 	LLVMValueRef nodeId_load = LLVMBuildLoad(ctx->builder, nodeId, "nodeId_load");
@@ -316,4 +326,12 @@ void JIT_LabelScan(void *iter, int nodeIdx) {
 
 	LLVMValueRef addNode_params[] = {ctx->r, LLVMConstInt(ctx->i32, nodeIdx, 0), node};
 	LLVMBuildCall2(ctx->builder, LLVMGetReturnType(LLVMTypeOf(addNode_func)), addNode_func, addNode_params, 3, "call");
+}
+
+void JIT_EndLabelScan() {
+	EmitCtx *ctx = EmitCtx_Get();
+
+	LLVMBuildBr(ctx->builder, ctx->loop_cond);
+
+	LLVMPositionBuilderAtEnd(ctx->builder, ctx->loop_end);
 }

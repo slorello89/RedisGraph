@@ -33,7 +33,6 @@ static bool Emit(OpBase *opBase) {
 	JIT_CreateRecord(opBase);
 	while(OpBase_Emit(opBase->children[0])) {
 		JIT_Result(op->result_set);
-		return true;
 	}
 
 	return false;
