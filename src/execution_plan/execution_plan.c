@@ -400,6 +400,19 @@ ResultSet *ExecutionPlan_Execute(ExecutionPlan *plan) {
 	return QueryCtx_GetResultSet();
 }
 
+static void *_SymbolResolve(const char *name) {
+	//[ _op, _project_expr_0, _iter, _rs ]
+	if(strcmp(name, "_Record_Add") == 0) return Record_Add;
+	if(strcmp(name, "_Record_AddNode") == 0) return Record_AddNode;
+	if(strcmp(name, "_Graph_GetNode") == 0) return Graph_GetNode;
+	if(strcmp(name, "_AR_EXP_Evaluate") == 0) return AR_EXP_Evaluate;
+	if(strcmp(name, "_RG_MatrixTupleIter_next") == 0) return RG_MatrixTupleIter_next;
+	if(strcmp(name, "_OpBase_CreateRecord") == 0) return OpBase_CreateRecord;
+	if(strcmp(name, "_ResultSet_AddRecord") == 0) return ResultSet_AddRecord;
+
+	return NULL;
+}
+
 ResultSet *ExecutionPlan_JIT(ExecutionPlan *plan) {
 	ASSERT(plan->prepared)
 
@@ -408,71 +421,13 @@ ResultSet *ExecutionPlan_JIT(ExecutionPlan *plan) {
 	EmitCtx_Init();
 
 	EmitCtx *emit_ctx = EmitCtx_Get();
-	LLVMTypeRef p[0];
-	LLVMTypeRef func_type = LLVMFunctionType(LLVMVoidType(), p, 0, false);
-	LLVMValueRef query = LLVMAddFunction(emit_ctx->module, "query", func_type);
-	
-	LLVMBasicBlockRef entry = LLVMAppendBasicBlock(query, "entry");
-
-    LLVMBuilderRef builder = LLVMCreateBuilder();
-    LLVMPositionBuilderAtEnd(builder, entry);
 
 	GraphContext *gc = QueryCtx_GetGraphCtx();
 	JIT_Init(gc->g);
-	emit_ctx->builder = builder;
 	OpBase_Emit(plan->root);
-	
-	LLVMBuildRetVoid(builder);
+	JIT_End();
 
-	char *m = LLVMPrintModuleToString(emit_ctx->module);
-	printf("%s\n", m);
-
-	char *error;
-
-    LLVMVerifyModule(emit_ctx->module, LLVMAbortProcessAction, &error);
-    LLVMDisposeMessage(error);
-    error = NULL;
-
-	LLVMInitializeNativeTarget();
-	LLVMInitializeNativeAsmPrinter();
-	LLVMInitializeNativeAsmParser();
-
-	LLVMExecutionEngineRef engine;
-
-	if (LLVMCreateExecutionEngineForModule(&engine, emit_ctx->module, &error) != 0) {
-		fprintf(stderr, "failed to create execution engine\n");
-		abort();
-	}
-
-
-	if (error) {
-		fprintf(stderr, "error: %s\n", error);
-		LLVMDisposeMessage(error);
-	}
-
-	int len = array_len(emit_ctx->arr);
-	for (size_t i = 0; i < len; i+=2)
-	{
-		LLVMValueRef global = emit_ctx->arr[i];
-		LLVMAddGlobalMapping(engine, global, &emit_ctx->arr[i+1]);		
-	}
-	
-	LLVMAddGlobalMapping(engine, emit_ctx->addRecord_func, ResultSet_AddRecord);
-	LLVMAddGlobalMapping(engine, emit_ctx->addToRecord_func, Record_Add);
-	LLVMAddGlobalMapping(engine, emit_ctx->createRecord_func, OpBase_CreateRecord);
-	LLVMAddGlobalMapping(engine, emit_ctx->AR_EXP_Evaluate_func, AR_EXP_Evaluate);
-	if(emit_ctx->iter_next_func)
-		LLVMAddGlobalMapping(engine, emit_ctx->iter_next_func, RG_MatrixTupleIter_next);
-	if(emit_ctx->getNode_func)
-		LLVMAddGlobalMapping(engine, emit_ctx->getNode_func, Graph_GetNode);
-	if(emit_ctx->addNode_func)
-		LLVMAddGlobalMapping(engine, emit_ctx->addNode_func, Record_AddNode);
-
-
-    void (*func)() = (void (*)(void))LLVMGetFunctionAddress(engine, "query");
-	func();
-
-	LLVMDisposeExecutionEngine(engine);
+	JIT_Run(_SymbolResolve);
 	
 	return QueryCtx_GetResultSet();
 }
