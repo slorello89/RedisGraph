@@ -2,6 +2,7 @@
 #include "../arithmetic/arithmetic_expression.h"
 #include "../util/rmalloc.h"
 #include "../util/arr.h"
+#include "../util/simple_timer.h"
 
 pthread_key_t _tlsEmitCtxKey;  // Thread local storage query context key.
 static const char str_g[] = "g";
@@ -228,7 +229,15 @@ void JIT_Run(SymbolResolve fn) {
 	int a = 1;
 
 	void (*func)() = (void (*)(void))QueryAddr;
+	
+	double tic [2], s ;
+	simple_tic (tic) ; 
+	
 	func();
+
+	s = simple_toc (tic) ;
+
+	printf("jit run %f ms\n", s*1000);
 
 	LLVMDisposeBuilder(ctx->builder);
 
@@ -261,7 +270,8 @@ void JIT_Result(void *rsVal) {
 	LLVMValueRef args[] = {local, ctx->r};
 	LLVMBuildCall2(ctx->builder, LLVMGetReturnType(LLVMTypeOf(addRecord_func)), addRecord_func, args, 2, "call");
 
-	JIT_CreateRecord(NULL);
+	//Record_FreeEntries
+	//JIT_CreateRecord(NULL);
 }
 
 void JIT_Project(void *opBase, AR_ExpNode **exps, uint exp_count, uint *record_offsets) {
