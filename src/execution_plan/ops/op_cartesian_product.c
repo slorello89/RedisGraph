@@ -19,6 +19,7 @@ OpBase *NewCartesianProductOp(const ExecutionPlan *plan) {
 	CartesianProduct *op = rm_malloc(sizeof(CartesianProduct));
 	op->init = true;
 	op->r = NULL;
+	op->emitPhase = 0;
 
 	// Set our Op operations
 	OpBase_Init((OpBase *)op, OPType_CARTESIAN_PRODUCT, "Cartesian Product", CartesianProductInit,
@@ -28,6 +29,24 @@ OpBase *NewCartesianProductOp(const ExecutionPlan *plan) {
 }
 
 static bool Emit(OpBase *opBase) {
+	CartesianProduct *op = (CartesianProduct *)opBase;
+	OpBase *child;
+
+	if(op->emitPhase == 0) {
+		for(int i = 0; i < op->op.childCount; i++) {
+			child = op->op.children[i];
+			OpBase_Emit(child);
+		}
+
+		op->emitPhase = 1;
+		return true;
+	}
+
+	for(int i = op->op.childCount - 1; i >= 0; i--) {
+		child = op->op.children[i];
+		OpBase_Emit(child);
+	}
+
 	return false;
 }
 

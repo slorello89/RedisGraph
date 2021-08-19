@@ -14,6 +14,7 @@ typedef struct {
 	OpBase op;
 	Record r;
 	bool init;
+	int emitPhase;
 } CartesianProduct;
 
 OpBase *NewCartesianProductOp(const ExecutionPlan *plan);

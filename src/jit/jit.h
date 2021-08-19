@@ -5,12 +5,20 @@
 #include "llvm-c/Core.h"
 #include "llvm-c/Error.h"
 #include "llvm-c/Initialization.h"
+#include "llvm-c/Orc.h"
 #include "llvm-c/OrcEE.h"
 #include "llvm-c/LLJIT.h"
 #include "llvm-c/Support.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/Analysis.h"
+#include <llvm-c/Transforms/PassManagerBuilder.h>
+#include "llvm-c/Transforms/Scalar.h"
 
+typedef struct {
+	LLVMBasicBlockRef loop_cond;
+	LLVMBasicBlockRef loop;
+	LLVMBasicBlockRef loop_end;
+} LLVMLoop;
 
 typedef struct {
 	LLVMModuleRef module;
@@ -27,9 +35,7 @@ typedef struct {
 	LLVMTypeRef si_type;
 	LLVMTypeRef node_type;
 	LLVMValueRef r;
-	LLVMBasicBlockRef loop_cond;
-	LLVMBasicBlockRef loop;
-	LLVMBasicBlockRef loop_end;
+	LLVMLoop *loop;
 } EmitCtx;
 
 typedef void *(*SymbolResolve)(const char *);

@@ -13,6 +13,7 @@ static const char str_CreateRecord[] = "OpBase_CreateRecord";
 static const char str_Record_Add[] = "Record_Add";
 static const char str_AR_EXP_Evaluate[] = "AR_EXP_Evaluate";
 static const char str_RG_MatrixTupleIter_next[] = "RG_MatrixTupleIter_next";
+static const char str_RG_MatrixTupleIter_reset[] = "RG_MatrixTupleIter_reset";
 static const char str_Graph_GetNode[] = "Graph_GetNode";
 static const char str_Record_AddNode[] = "Record_AddNode";
 
@@ -52,6 +53,7 @@ EmitCtx *EmitCtx_Get() {
 		ctx->si_type = LLVMStructTypeInContext(ctx->Ctx, x, 3, 0);
 		LLVMTypeRef node_x[] = {ctx->voidPtr, ctx->i64, ctx->voidPtr, ctx->i32};
 		ctx->node_type = LLVMStructTypeInContext(ctx->Ctx, node_x, 4, 0);
+		ctx->loop = array_new(LLVMLoop, 0);
 		// Set a new thread-local EmitCtx if one has not been created.
 		pthread_setspecific(_tlsEmitCtxKey, ctx);
 	}
@@ -101,6 +103,13 @@ static LLVMValueRef GetOrCreateFunction(const char* name) {
 		return LLVMAddFunction(ctx->module, "RG_MatrixTupleIter_next", iter_next_type);
 	}
 
+	if(strcmp(name, "RG_MatrixTupleIter_reset") == 0) {
+		LLVMTypeRef iter_next_params[] = { ctx->voidPtr }; 
+		LLVMTypeRef iter_next_type = LLVMFunctionType(ctx->i32, iter_next_params, 1, 0);
+
+		return LLVMAddFunction(ctx->module, "RG_MatrixTupleIter_reset", iter_next_type);
+	}
+
 	if(strcmp(name, "Graph_GetNode") == 0) {
 		LLVMTypeRef iter_next_params[] = { ctx->voidPtr, ctx->i64, LLVMPointerType(ctx->node_type, 0) }; 
 		LLVMTypeRef iter_next_type = LLVMFunctionType(ctx->i32, iter_next_params, 3, 0);
@@ -131,6 +140,11 @@ static LLVMValueRef GetOrCreateGlobal(const char* name, void* value) {
 	return global;
 }
 
+static LLVMValueRef CreatePointer(void* value) {
+	EmitCtx *ctx = EmitCtx_Get();
+	return LLVMConstIntToPtr(LLVMConstInt(ctx->i64, value, 0), ctx->voidPtr);
+}
+
 void JIT_Init(void *g) {
 	LLVMTypeRef voidPtr = LLVMPointerType(LLVMVoidType(), 0);
 
@@ -146,7 +160,7 @@ void JIT_End() {
 
 	ctx->TSM = LLVMOrcCreateNewThreadSafeModule(ctx->module, ctx->TSCtx);
 
-    LLVMOrcDisposeThreadSafeContext(ctx->TSCtx);
+	LLVMOrcDisposeThreadSafeContext(ctx->TSCtx);
 
 	char *m = LLVMPrintModuleToString(ctx->module);
 	printf("%s\n", m);
@@ -164,26 +178,44 @@ static void handleError(LLVMErrorRef Err) {
 }
 
 static LLVMErrorRef definitionGeneratorFn(LLVMOrcDefinitionGeneratorRef G, void *Ctx,
-                        LLVMOrcLookupStateRef *LS, LLVMOrcLookupKind K,
-                        LLVMOrcJITDylibRef JD, LLVMOrcJITDylibLookupFlags F,
-                        LLVMOrcCLookupSet Names, size_t NamesCount) {
+						LLVMOrcLookupStateRef *LS, LLVMOrcLookupKind K,
+						LLVMOrcJITDylibRef JD, LLVMOrcJITDylibLookupFlags F,
+						LLVMOrcCLookupSet Names, size_t NamesCount) {
 	SymbolResolve fn = Ctx;
-    for (size_t I = 0; I < NamesCount; I++) {
-      LLVMOrcCLookupSetElement Element = Names[I];
-      LLVMOrcJITTargetAddress Addr = (LLVMOrcJITTargetAddress)fn(LLVMOrcSymbolStringPoolEntryStr(Element.Name));
+	for (size_t I = 0; I < NamesCount; I++) {
+	  LLVMOrcCLookupSetElement Element = Names[I];
+	  LLVMOrcJITTargetAddress Addr = (LLVMOrcJITTargetAddress)fn(LLVMOrcSymbolStringPoolEntryStr(Element.Name));
 	  if(!Addr) continue;
-      LLVMJITSymbolFlags Flags = {LLVMJITSymbolGenericFlagsWeak, 0};
-      LLVMJITEvaluatedSymbol Sym = {Addr, Flags};
-      LLVMOrcRetainSymbolStringPoolEntry(Element.Name);
-      LLVMJITCSymbolMapPair Pair = {Element.Name, Sym};
-      LLVMJITCSymbolMapPair Pairs[] = {Pair};
-      LLVMOrcMaterializationUnitRef MU = LLVMOrcAbsoluteSymbols(Pairs, 1);
-      LLVMErrorRef Err = LLVMOrcJITDylibDefine(JD, MU);
-      if (Err)
-        return Err;
-    }
-    return LLVMErrorSuccess;
+	  LLVMJITSymbolFlags Flags = {LLVMJITSymbolGenericFlagsWeak, 0};
+	  LLVMJITEvaluatedSymbol Sym = {Addr, Flags};
+	  LLVMOrcRetainSymbolStringPoolEntry(Element.Name);
+	  LLVMJITCSymbolMapPair Pair = {Element.Name, Sym};
+	  LLVMJITCSymbolMapPair Pairs[] = {Pair};
+	  LLVMOrcMaterializationUnitRef MU = LLVMOrcAbsoluteSymbols(Pairs, 1);
+	  LLVMErrorRef Err = LLVMOrcJITDylibDefine(JD, MU);
+	  if (Err)
+		return Err;
+	}
+	return LLVMErrorSuccess;
 }
+
+// static void JIT_optimize(LLVMModuleRef module)
+// {
+// 	LLVMPassManagerRef llvm_fpm = LLVMCreateFunctionPassManagerForModule(module);
+// 	LLVMValueRef func;
+
+// 	LLVMAddCFGSimplificationPass(llvm_fpm);
+// 	LLVMAddInstructionSimplifyPass(llvm_fpm);
+// 	LLVMAddInstructionCombiningPass(llvm_fpm);
+
+// 	LLVMInitializeFunctionPassManager(llvm_fpm);
+// 	for (func = LLVMGetFirstFunction(module);
+// 		 func != NULL;
+// 		 func = LLVMGetNextFunction(func))
+// 		LLVMRunFunctionPassManager(llvm_fpm, func);
+// 	LLVMFinalizeFunctionPassManager(llvm_fpm);
+// 	LLVMDisposePassManager(llvm_fpm);
+// }
 
 void JIT_Run(SymbolResolve fn) {
 	EmitCtx *ctx = EmitCtx_Get();
@@ -203,6 +235,8 @@ void JIT_Run(SymbolResolve fn) {
 		handleError(Err);
 		goto jit_cleanup;
 	}
+
+	//JIT_optimize(ctx->module);
 
 	// LLVMOrcDefinitionGeneratorRef ProcessSymbolsGenerator = 0;
 	// if ((Err = LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
@@ -302,31 +336,36 @@ void JIT_StartLabelScan(void *iter, int nodeIdx) {
 	LLVMTypeRef i64ptr = LLVMPointerType(ctx->i64, 0);
 
 	LLVMValueRef iter_next_func = GetOrCreateFunction(str_RG_MatrixTupleIter_next);
+	LLVMValueRef iter_reset_func = GetOrCreateFunction(str_RG_MatrixTupleIter_reset);
 	LLVMValueRef getNode_func = GetOrCreateFunction(str_Graph_GetNode);
 	LLVMValueRef addNode_func = GetOrCreateFunction(str_Record_AddNode);
 
-	LLVMValueRef iter_global = GetOrCreateGlobal("iter", iter);
-	LLVMValueRef iter_local = LLVMBuildLoad2(ctx->builder, ctx->voidPtr, iter_global, "iter");
+	LLVMValueRef iter_value = CreatePointer(iter);
 
 	LLVMValueRef nodeId = LLVMBuildAlloca(ctx->builder, ctx->i64, "nodeId");
 	LLVMValueRef depleted = LLVMBuildAlloca(ctx->builder, LLVMInt8Type(), "depleted");
 	LLVMValueRef node = LLVMBuildAlloca(ctx->builder, ctx->node_type, "node");
 
-	ctx->loop_cond = LLVMAppendBasicBlockInContext(ctx->Ctx, ctx->query, "ls_loop_cond");
-	ctx->loop = LLVMAppendBasicBlockInContext(ctx->Ctx, ctx->query, "ls_loop");
-	ctx->loop_end = LLVMAppendBasicBlockInContext(ctx->Ctx, ctx->query, "ls_loop_end");
+	LLVMLoop loop;
+	loop.loop_cond = LLVMAppendBasicBlockInContext(ctx->Ctx, ctx->query, "ls_loop_cond");
+	loop.loop = LLVMAppendBasicBlockInContext(ctx->Ctx, ctx->query, "ls_loop");
+	loop.loop_end = LLVMAppendBasicBlockInContext(ctx->Ctx, ctx->query, "ls_loop_end");
+	array_append(ctx->loop, loop);
 
-	LLVMBuildBr(ctx->builder, ctx->loop_cond);
-	LLVMPositionBuilderAtEnd(ctx->builder, ctx->loop_cond);
+	LLVMValueRef iter_reset_params[] = {iter_value};
+	LLVMBuildCall2(ctx->builder, LLVMGetReturnType(LLVMTypeOf(iter_reset_func)), iter_reset_func, iter_reset_params, 1, "call");
 
-	LLVMValueRef iter_next_params[] = {iter_local, LLVMConstPointerNull(i64ptr), nodeId, LLVMConstPointerNull(ctx->voidPtr), depleted};
+	LLVMBuildBr(ctx->builder, loop.loop_cond);
+	LLVMPositionBuilderAtEnd(ctx->builder, loop.loop_cond);
+
+	LLVMValueRef iter_next_params[] = {iter_value, LLVMConstPointerNull(i64ptr), nodeId, LLVMConstPointerNull(ctx->voidPtr), depleted};
 	LLVMBuildCall2(ctx->builder, LLVMGetReturnType(LLVMTypeOf(iter_next_func)), iter_next_func, iter_next_params, 5, "call");
 
 	LLVMValueRef depleted_load = LLVMBuildLoad2(ctx->builder, ctx->i8, depleted, "depleted");
 	LLVMValueRef depleted_trunc = LLVMBuildTrunc(ctx->builder, depleted_load, ctx->i1, "trunc");
-	LLVMBuildCondBr(ctx->builder, depleted_trunc, ctx->loop_end, ctx->loop);
+	LLVMBuildCondBr(ctx->builder, depleted_trunc, loop.loop_end, loop.loop);
 
-	LLVMPositionBuilderAtEnd(ctx->builder, ctx->loop);
+	LLVMPositionBuilderAtEnd(ctx->builder, loop.loop);
 
 	LLVMValueRef g_global = GetOrCreateGlobal(str_g, NULL);
 	LLVMValueRef g_local = LLVMBuildLoad2(ctx->builder, ctx->voidPtr, g_global, "g");
@@ -341,7 +380,11 @@ void JIT_StartLabelScan(void *iter, int nodeIdx) {
 void JIT_EndLabelScan() {
 	EmitCtx *ctx = EmitCtx_Get();
 
-	LLVMBuildBr(ctx->builder, ctx->loop_cond);
+	uint32_t i = array_len(ctx->loop) - 1;
+	LLVMLoop loop = ctx->loop[i];
+	array_del(ctx->loop, i);
 
-	LLVMPositionBuilderAtEnd(ctx->builder, ctx->loop_end);
+	LLVMBuildBr(ctx->builder, loop.loop_cond);
+
+	LLVMPositionBuilderAtEnd(ctx->builder, loop.loop_end);
 }

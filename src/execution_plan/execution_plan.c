@@ -407,6 +407,7 @@ static void *_SymbolResolve(const char *name) {
 	if(strcmp(name, "_Graph_GetNode") == 0) return Graph_GetNode;
 	if(strcmp(name, "_AR_EXP_Evaluate") == 0) return AR_EXP_Evaluate;
 	if(strcmp(name, "_RG_MatrixTupleIter_next") == 0) return RG_MatrixTupleIter_next;
+	if(strcmp(name, "_RG_MatrixTupleIter_reset") == 0) return RG_MatrixTupleIter_reset;
 	if(strcmp(name, "_OpBase_CreateRecord") == 0) return OpBase_CreateRecord;
 	if(strcmp(name, "_ResultSet_AddRecord") == 0) return ResultSet_AddRecord;
 
