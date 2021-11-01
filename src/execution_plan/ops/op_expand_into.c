@@ -126,6 +126,10 @@ OpBase *NewExpandIntoOp
 	return (OpBase *)op;
 }
 
+static bool Emit(OpBase *opBase) {
+	return false;
+}
+
 static OpResult ExpandIntoInit
 (
 	OpBase *opBase

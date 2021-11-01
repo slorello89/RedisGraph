@@ -214,11 +214,11 @@ static void _ExecuteQuery(void *args) {
 		ExecutionPlan_PreparePlan(plan);
 		if(profile) {
 			ExecutionPlan_Profile(plan);
-			ExecutionPlan_Print(plan, rm_ctx);
+			if(!ErrorCtx_EncounteredError()) ExecutionPlan_Print(plan, rm_ctx);
 		} else if(jit) {
 			result_set = ExecutionPlan_JIT(plan);
 		} else {
-			if(!ErrorCtx_EncounteredError()) ExecutionPlan_Print(plan, rm_ctx);
+			result_set = ExecutionPlan_Execute(plan);
 		}
 
 		// abort timeout if set
