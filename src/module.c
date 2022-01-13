@@ -1,5 +1,5 @@
 /*
-* Copyright 2018-2020 Redis Labs Ltd. and Contributors
+* Copyright 2018-2021 Redis Labs Ltd. and Contributors
 *
 * This file is available under the Redis Labs Source Available License Agreement
 */
@@ -64,7 +64,7 @@ static void _PrepareModuleGlobals(RedisModuleCtx *ctx, RedisModuleString **argv,
 static int GraphBLAS_Init(RedisModuleCtx *ctx) {
 	// GraphBLAS should use Redis allocator
 	GrB_Info res = GxB_init(GrB_NONBLOCKING, RedisModule_Alloc,
-			RedisModule_Calloc, RedisModule_Realloc, RedisModule_Free, true);
+			RedisModule_Calloc, RedisModule_Realloc, RedisModule_Free);
 	if(res != GrB_SUCCESS) {
 		RedisModule_Log(ctx, "warning", "Encountered error initializing GraphBLAS");
 		return REDISMODULE_ERR;
@@ -184,6 +184,11 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
 	}
 
 	if(RedisModule_CreateCommand(ctx, "graph.LIST", Graph_List, "readonly", 0, 0,
+								 0) == REDISMODULE_ERR) {
+		return REDISMODULE_ERR;
+	}
+
+	if(RedisModule_CreateCommand(ctx, "graph.DEBUG", Graph_Debug, "readonly", 0, 0,
 								 0) == REDISMODULE_ERR) {
 		return REDISMODULE_ERR;
 	}
